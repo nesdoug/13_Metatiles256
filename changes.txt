@@ -1,0 +1,16 @@
+LIB nesdoug.s changed to allow 256 metatiles
+
+NES_ST saved new metatile file
+meta.py now outputs file with .h extension, same name as input file,
+and the array name is the same as input file
+you can #include it directly to the main .h or .c file.
+
+took new photo of the metatile screen, import to Tiled, tested a few of the new blocks
+saved to BG folder new room1
+
+crt0.s changed to add a few more library variables.
+META_PTR2 and META_VAR
+
+edited metatiles.c to manually add 3 single metatiles to test buffer_1_mt
+...looks like green UU YY and brick at the top of the screen.
+(you can't collide with them, we didn't change the collision map)
