@@ -1,5 +1,5 @@
-//Written by Doug Fraker 2018
-// v 1.02
+// Written by Doug Fraker
+// version 1.2, 1/1/2022
 
 // Feb 2020 - support 256 metatiles, added a music speed function
 
@@ -28,9 +28,8 @@ void __fastcall__ multi_vram_buffer_vert(const char * data, unsigned char len, i
 // to push multiple writes as one sequential vertical write to the vram_buffer
 
 
-void clear_vram_buffer(void);
-// just sets the index into the vram buffer to zero
-// this should be done at the beginning of each frame, if using the vram_buffer
+// void clear_vram_buffer(void);
+// removed, it should clear itself
 
 
 unsigned char __fastcall__ get_pad_new(unsigned char pad);
@@ -128,11 +127,10 @@ void __fastcall__ buffer_4_mt(int ppu_address, char index);
 // "metatile" in data can be 0-255, or whatever the metatile table size is
 
 
-void flush_vram_update_nmi(void);
+void flush_vram_update2(void);
 // same as flush_vram_update, but assumes that a pointer to the vram has been set already
 // this is for when the screen is OFF, but you still want to write to the PPU
 // with the vram_buffer system
-// "nmi" is a misnomer. this doesn't have to happen during nmi.
 
 
 void __fastcall__ color_emphasis(char color);

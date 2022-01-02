@@ -30,8 +30,7 @@ void main (void) {
 	bank_spr(1);
 
 	set_vram_buffer(); // do at least once, sets a pointer to a buffer
-	clear_vram_buffer();
-
+	
 	load_room();
 	
 	set_scroll_y(0xff); // shift the bg down 1 pixel
@@ -44,8 +43,6 @@ void main (void) {
 		ppu_wait_nmi(); // wait till beginning of the frame
 		
 		pad1 = pad_poll(0); // read the first controller
-		
-		clear_vram_buffer(); // do at the beginning of each frame
 		
 		movement();
 		draw_sprites();
@@ -60,18 +57,17 @@ void load_room(void){
 	set_mt_pointer(metatiles1);
 	for(y=0; ;y+=0x20){
 		for(x=0; ;x+=0x20){
-			clear_vram_buffer(); // do each frame, and before putting anything in the buffer
 			address = get_ppu_addr(0, x, y);
 			index = (y & 0xf0) + (x >> 4);
 			buffer_4_mt(address, index); // ppu_address, index to the data
-			flush_vram_update_nmi();
+			flush_vram_update2();
 			if (x == 0xe0) break;
 		}
 		if (y == 0xe0) break;
 	}
 	
 	//test buffer_1_mt with values above 50
-	clear_vram_buffer();
+	
 	/*address = get_ppu_addr(0, 64, 0);
 	buffer_1_mt(address, 100);
 	address = get_ppu_addr(0, 80, 0);
@@ -83,7 +79,7 @@ void load_room(void){
 	buffer_1_mt(NTADR_A(8,0), 100);
 	buffer_1_mt(NTADR_A(10,0), 200);
 	buffer_1_mt(NTADR_A(12,0), 239); // max number on our list
-	flush_vram_update_nmi();
+	flush_vram_update2();
 	
 	set_vram_update(NULL); // just turn ppu updates OFF for this example
 	
