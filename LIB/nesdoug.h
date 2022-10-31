@@ -1,7 +1,5 @@
 // Written by Doug Fraker
-// version 1.2, 1/1/2022
-
-// Feb 2020 - support 256 metatiles, added a music speed function
+// version 1.3, 10/31/2022
 
 // Why am I doing so much with a vram_buffer? This is an automated system, which
 // works when the screen is on. You can write to the buffer at any time. 
@@ -28,8 +26,8 @@ void __fastcall__ multi_vram_buffer_vert(const char * data, unsigned char len, i
 // to push multiple writes as one sequential vertical write to the vram_buffer
 
 
-// void clear_vram_buffer(void);
-// removed, it should clear itself
+void clear_vram_buffer(void);
+// resets the vram buffer, if you need to undo something, like for a scene change
 
 
 unsigned char __fastcall__ get_pad_new(unsigned char pad);
@@ -113,7 +111,7 @@ void __fastcall__ buffer_1_mt(int ppu_address, char metatile);
 // will push 1 metatile and 0 attribute bytes to the vram_buffer
 // make sure to set_vram_buffer(), and clear_vram_buffer(), 
 // and set_mt_pointer() 
-// "metatile" can be 0-255, or whatever the metatile table size is
+// "metatile" should be 0-50, like the metatile data
 
 
 void __fastcall__ buffer_4_mt(int ppu_address, char index);
@@ -124,7 +122,6 @@ void __fastcall__ buffer_4_mt(int ppu_address, char index);
 // "index" is which starting byte in the room data, to convert to tiles.
 // use index = (y & 0xf0) + (x >> 4); where x 0-255 and y 0-239;
 // index should be 0-239, like the room data it represents
-// "metatile" in data can be 0-255, or whatever the metatile table size is
 
 
 void flush_vram_update2(void);
@@ -169,12 +166,3 @@ void seed_rng(void);
 // get from the frame count. You can use a button (start on title screen) to trigger
 
 
-void __fastcall__ new_speed(unsigned int rate);
-// much better than set_music_speed, this can't be ruined by an in-song Fxx effect
-// when you look at the song data, the last # in the song header is the NTSC play rate
-// .word @song0ch0,@song0ch1,@song0ch2,@song0ch3,@song0ch4,307,256 <-- the 256
-// (the number to the left of that is the PAL play rate... the 307)
-// this function directly sets the play rate, 150 tempo gives 256
-// smaller number is slower, bigger number is faster
-
- 

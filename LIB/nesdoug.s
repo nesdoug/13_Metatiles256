@@ -1,13 +1,12 @@
 ;written by Doug Fraker
-;version 1.2, 1/1/2022
-;alternate metatile code, supports up to 256 metatiles
-
+;version 1.3, 10/31/2022
 
 .export _set_vram_buffer, _multi_vram_buffer_horz, _multi_vram_buffer_vert, _one_vram_buffer
 .export _get_pad_new, _get_frame_count, _set_music_speed
 .export _check_collision, _pal_fade_to, _set_scroll_x, _set_scroll_y, _add_scroll_y, _sub_scroll_y
 .export  _get_ppu_addr, _get_at_addr, _set_data_pointer, _set_mt_pointer, _buffer_4_mt, _buffer_1_mt
-.export _color_emphasis, _xy_split, _gray_line, _seed_rng, _new_speed
+.export _color_emphasis, _xy_split, _gray_line, _seed_rng
+.export _clear_vram_buffer
 
 .segment "CODE"
 
@@ -16,8 +15,10 @@
 
 ;void set_vram_buffer(void)
 _set_vram_buffer:
-	lda #$ff
-	sta VRAM_BUF
+	ldx #$ff
+	stx VRAM_BUF
+	inx ;x=0
+	stx VRAM_INDEX
 	ldx #>VRAM_BUF
 	lda #<VRAM_BUF
 	jmp _set_vram_update
@@ -101,12 +102,12 @@ _one_vram_buffer:
 	
 	
 ;void clear_vram_buffer(void);	
-;_clear_vram_buffer:
-;	lda #0
-;	sta VRAM_INDEX
-;	lda #$ff
-;	sta VRAM_BUF
-;	rts
+_clear_vram_buffer:
+	lda #0
+	sta VRAM_INDEX
+	lda #$ff
+	sta VRAM_BUF
+	rts
 	
 	
 	
@@ -479,18 +480,18 @@ _buffer_4_mt:
 		sta VRAM_BUF+2,x
 		sta VRAM_BUF+9,x ;loops twice, so, it does this twice
 		
-	jsr @sub2 ;set pointer to the metatile and y
+	jsr @sub2 ;gets y is which metatile
 	
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+3,x ;		buffer the 4 tiles
 	iny
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+4,x
 	iny
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+10,x
 	iny
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+11,x
 	jsr @sub4 ;get attrib bits, shift into place
 	
@@ -502,18 +503,17 @@ _buffer_4_mt:
 	jsr @sub1
 	
 	inc TEMP+6 ;count and index
-	jsr @sub2 ;set pointer to the metatile and y
-	
-	lda (META_PTR2), y
+	jsr @sub2
+	lda (META_PTR), y
 	sta VRAM_BUF+5,x ;		buffer the 4 tiles
 	iny
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+6,x
 	iny
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+12,x
 	iny
-	lda (META_PTR2), y
+	lda (META_PTR), y
 	sta VRAM_BUF+13,x
 	jsr @sub4
 	
@@ -592,10 +592,15 @@ _buffer_4_mt:
 	
 @sub2:	;get the next metatile offset
 	ldy TEMP+6
-	lda TEMP+2, y ;metatile temp copied to +2,+3,+5,and +6
-	sta META_VAR
-	jmp MT_MULT5 ;multiply 5 and set y
-;	rts
+	lda TEMP+2, y ;metatile
+;multiply by 5	
+	sta TEMP+9
+	asl a
+	asl a ;x4 = 4 bytes per
+	clc
+	adc TEMP+9
+	tay
+	rts
 	
 
 @sub3: ;check make sure we're not at the lowest y and overflowing
@@ -619,7 +624,7 @@ _buffer_4_mt:
 	
 @sub4: ;get attrib bits, roll them in place
 	iny
-	lda (META_PTR2), y ;5th byte = attribute
+	lda (META_PTR), y ;5th byte = attribute
 	and #3 ;just need 2 bits
 	ror a ;bit to carry
 	ror TEMP+10 ;shift carry in
@@ -634,7 +639,7 @@ _buffer_4_mt:
 _buffer_1_mt:
 	;which metatile, in A
 
-	sta META_VAR
+	sta TEMP+2
 	
 	jsr popax ;get ppu address
 	and #$de ;sanitize, should be even x and y
@@ -658,19 +663,22 @@ _buffer_1_mt:
 	sta VRAM_BUF+2,x
 	sta VRAM_BUF+7,x
 	
-	lda META_VAR ;which metatile
-	jsr MT_MULT5 ;multiply 5 and set y
-
-	lda (META_PTR2), y ;tile
+	lda TEMP+2 ;which metatile
+	asl a
+	asl a
+	clc
+	adc TEMP+2 ;multiply 5
+	tay
+	lda (META_PTR), y ;tile
 	sta VRAM_BUF+3,x
 	iny
-	lda (META_PTR2), y ;tile
+	lda (META_PTR), y ;tile
 	sta VRAM_BUF+4,x
 	iny
-	lda (META_PTR2), y ;tile
+	lda (META_PTR), y ;tile
 	sta VRAM_BUF+8,x
 	iny
-	lda (META_PTR2), y ;tile
+	lda (META_PTR), y ;tile
 	sta VRAM_BUF+9,x
 	
 	txa
@@ -682,37 +690,6 @@ _buffer_1_mt:
 	sta VRAM_BUF,x
 	rts
 	
-	
-	
-MT_MULT5:
-;multiply metatile value (8 bit) by 5
-;and add to pointer (16 bit)
-;mt var should be in META_VAR and in A register
-;x is forbidden
-
-	ldy #0
-	sty META_PTR2+1 ;zero the high byte
-	asl a ;x2
-	rol META_PTR2+1
-	asl a ;x4
-	rol META_PTR2+1
-	clc
-	adc META_VAR
-	bcc @1
-	inc META_PTR2+1
-@1:
-	clc
-	adc META_PTR
-	bcc @2
-	inc META_PTR2+1
-@2:
-	sta META_PTR2 ;set low byte
-	lda META_PTR2+1
-	clc
-	adc META_PTR+1 
-	sta META_PTR2+1 ;set high byte
-	ldy #0
-	rts
 	
 	
 	
@@ -830,16 +807,6 @@ _seed_rng:
 	lda <FRAME_CNT1
 	sta <RAND_SEED
 	rts
-	
-	
-	
-;void __fastcall__ new_speed(unsigned int rate);	
-_new_speed:
-;ax = new speed
-	sta FT_TEMPO_STEP_L
-	stx FT_TEMPO_STEP_H
-	rts	
-
 	
 	
 	
